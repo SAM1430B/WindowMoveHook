@@ -90,8 +90,15 @@ DWORD WINAPI InitializationThread(LPVOID lpParam) {
             ExpandToWindowSize(g_hTargetWindow, g_Config.targetW, g_Config.targetH, windowW, windowH);
         }
 
+        if (g_Config.targetX == -99999 || g_Config.targetY == -99999) {
+            uFlags |= SWP_NOMOVE;
+        }
+
         // Apply the physical window size
-        TrueSetWindowPos(g_hTargetWindow, NULL, g_Config.targetX, g_Config.targetY, windowW, windowH, uFlags);
+        TrueSetWindowPos(g_hTargetWindow, NULL,
+            (g_Config.targetX == -99999) ? 0 : g_Config.targetX,
+            (g_Config.targetY == -99999) ? 0 : g_Config.targetY,
+            windowW, windowH, uFlags);
 
         // Force cross-thread window UI recalculation 
         PostMessage(g_hTargetWindow, WM_SYSCOMMAND, SC_MINIMIZE, 0);

@@ -22,8 +22,8 @@ void LoadConfig() {
     g_Config.dontGetPosition = GetPrivateProfileIntA("General", "DontGetPosition", 0, configFile.c_str());
 
     // Coordinates (Physical Size)
-    g_Config.targetX = GetPrivateProfileIntA("General", "PosX", 0, configFile.c_str());
-    g_Config.targetY = GetPrivateProfileIntA("General", "PosY", 0, configFile.c_str());
+    g_Config.targetX = GetPrivateProfileIntA("General", "PosX", -99999, configFile.c_str());
+    g_Config.targetY = GetPrivateProfileIntA("General", "PosY", -99999, configFile.c_str());
     g_Config.targetW = GetPrivateProfileIntA("General", "Width", 0, configFile.c_str());
     g_Config.targetH = GetPrivateProfileIntA("General", "Height", 0, configFile.c_str());
 
