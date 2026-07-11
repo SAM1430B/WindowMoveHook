@@ -1,7 +1,8 @@
 #include "Shared.h"
 #include <intrin.h>
 #include <algorithm>
-#include <unordered_map> // For our high-speed cache
+#include <unordered_map>
+#include <cmath>
 
 #pragma intrinsic(_ReturnAddress)
 
@@ -165,21 +166,45 @@ BOOL WINAPI HookedScreenToClient(HWND hWnd, LPPOINT lpPoint) {
             double scaleX, scaleY;
             GetMouseScaleFactors(scaleX, scaleY);
 
-        // Scale the physical coordinate down to the fake coordinate
-            lpPoint->x = static_cast<LONG>(lpPoint->x * scaleX);
-            lpPoint->y = static_cast<LONG>(lpPoint->y * scaleY);
+            // Scale the physical coordinate UP to the fake coordinate with pixel-perfect rounding
+            lpPoint->x = std::lround(lpPoint->x * scaleX);
+            lpPoint->y = std::lround(lpPoint->y * scaleY);
         }
     }
     return result;
 }
 
+// Mouse Correction: Multi-Point Inbound Scaling
+int WINAPI HookedMapWindowPoints(HWND hWndFrom, HWND hWndTo, LPPOINT lpPoints, UINT cPoints) {
+    void* retAddr = _ReturnAddress();
+    int result = TrueMapWindowPoints(hWndFrom, hWndTo, lpPoints, cPoints);
+
+    // ONLY intercept INBOUND coordinates (From Screen/NULL to the Target Window)
+    if (result != 0 && g_Config.enableFakeSize && hWndFrom == NULL && hWndTo == g_hTargetWindow) {
+        if (!IsCallerBypassed(retAddr)) {
+            double scaleX, scaleY;
+            GetMouseScaleFactors(scaleX, scaleY);
+
+            for (UINT i = 0; i < cPoints; ++i) {
+                lpPoints[i].x = std::lround(lpPoints[i].x * scaleX);
+                lpPoints[i].y = std::lround(lpPoints[i].y * scaleY);
+            }
+        }
+    }
+
+    return result;
+}
+
 // Mouse Correction: Window Message Scaling
 LRESULT CALLBACK HookedWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    // Intercept mouse input messages
+    // Intercept inbound mouse input messages
     if (g_Config.enableFakeSize && hWnd == g_hTargetWindow) {
-        if (uMsg == WM_MOUSEMOVE || uMsg == WM_LBUTTONDOWN || uMsg == WM_LBUTTONUP ||
-            uMsg == WM_RBUTTONDOWN || uMsg == WM_RBUTTONUP || uMsg == WM_MBUTTONDOWN ||
-            uMsg == WM_MBUTTONUP || uMsg == WM_XBUTTONDOWN || uMsg == WM_XBUTTONUP) {
+
+        if (uMsg == WM_MOUSEMOVE || uMsg == WM_MOUSEHOVER ||
+            uMsg == WM_LBUTTONDOWN || uMsg == WM_LBUTTONUP || uMsg == WM_LBUTTONDBLCLK ||
+            uMsg == WM_RBUTTONDOWN || uMsg == WM_RBUTTONUP || uMsg == WM_RBUTTONDBLCLK ||
+            uMsg == WM_MBUTTONDOWN || uMsg == WM_MBUTTONUP || uMsg == WM_MBUTTONDBLCLK ||
+            uMsg == WM_XBUTTONDOWN || uMsg == WM_XBUTTONUP || uMsg == WM_XBUTTONDBLCLK) {
 
             // Extract the original physical coordinates
             int xPos = GET_X_LPARAM(lParam);
@@ -189,10 +214,11 @@ LRESULT CALLBACK HookedWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
             double scaleX, scaleY;
             GetMouseScaleFactors(scaleX, scaleY);
 
+            // Scale the physical coordinate up to the fake coordinate
             xPos = static_cast<int>(xPos * scaleX);
             yPos = static_cast<int>(yPos * scaleY);
 
-            // Re-pack the modified coordinates back into lParam
+            // Re-pack the modified coordinates safely back into a 32-bit lParam
             lParam = MAKELPARAM(xPos, yPos);
         }
     }

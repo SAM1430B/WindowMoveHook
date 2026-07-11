@@ -10,6 +10,7 @@ BOOL(WINAPI* TrueMoveWindow)(HWND, int, int, int, int, BOOL) = MoveWindow;
 BOOL(WINAPI* TrueAdjustWindowRect)(LPRECT, DWORD, BOOL) = AdjustWindowRect;
 BOOL(WINAPI* TrueGetClientRect)(HWND, LPRECT) = GetClientRect;
 BOOL(WINAPI* TrueScreenToClient)(HWND, LPPOINT) = ScreenToClient;
+int(WINAPI* TrueMapWindowPoints)(HWND, HWND, LPPOINT, UINT) = MapWindowPoints;
 
 typedef BOOL(WINAPI* PFN_SET_PROCESS_DPI_AWARENESS_CONTEXT)(HANDLE);
 typedef HRESULT(WINAPI* PFN_SET_PROCESS_DPI_AWARENESS)(int);
@@ -117,7 +118,10 @@ DWORD WINAPI InitializationThread(LPVOID lpParam) {
     if (g_Config.hookMoveWindow) DetourAttach(&(PVOID&)TrueMoveWindow, HookedMoveWindow);
     if (g_Config.hookAdjustWindowRect) DetourAttach(&(PVOID&)TrueAdjustWindowRect, HookedAdjustWindowRect);
     if (g_Config.hookGetClientRect) DetourAttach(&(PVOID&)TrueGetClientRect, HookedGetClientRect);
-    if (g_Config.hookScreenToClient) DetourAttach(&(PVOID&)TrueScreenToClient, HookedScreenToClient);
+    if (g_Config.hookScreenToClient) {
+        DetourAttach(&(PVOID&)TrueScreenToClient, HookedScreenToClient);
+        DetourAttach(&(PVOID&)TrueMapWindowPoints, HookedMapWindowPoints);
+    }
 
     DetourTransactionCommit();
     return 0;
@@ -137,7 +141,10 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
         if (g_Config.hookMoveWindow) DetourDetach(&(PVOID&)TrueMoveWindow, HookedMoveWindow);
         if (g_Config.hookAdjustWindowRect) DetourDetach(&(PVOID&)TrueAdjustWindowRect, HookedAdjustWindowRect);
         if (g_Config.hookGetClientRect) DetourDetach(&(PVOID&)TrueGetClientRect, HookedGetClientRect);
-        if (g_Config.hookScreenToClient) DetourDetach(&(PVOID&)TrueScreenToClient, HookedScreenToClient);
+        if (g_Config.hookScreenToClient) {
+            DetourDetach(&(PVOID&)TrueScreenToClient, HookedScreenToClient);
+            DetourDetach(&(PVOID&)TrueMapWindowPoints, HookedMapWindowPoints);
+        }
 
         DetourTransactionCommit();
 

@@ -43,6 +43,7 @@ extern BOOL(WINAPI* TrueMoveWindow)(HWND, int, int, int, int, BOOL);
 extern BOOL(WINAPI* TrueAdjustWindowRect)(LPRECT, DWORD, BOOL);
 extern BOOL(WINAPI* TrueGetClientRect)(HWND, LPRECT);
 extern BOOL(WINAPI* TrueScreenToClient)(HWND, LPPOINT);
+extern int(WINAPI* TrueMapWindowPoints)(HWND, HWND, LPPOINT, UINT);
 
 // Original WndProc pointer
 extern WNDPROC OriginalWndProc;
@@ -57,4 +58,6 @@ BOOL WINAPI HookedMoveWindow(HWND hWnd, int X, int Y, int nWidth, int nHeight, B
 BOOL WINAPI HookedAdjustWindowRect(LPRECT lpRect, DWORD dwStyle, BOOL bMenu);
 BOOL WINAPI HookedGetClientRect(HWND hWnd, LPRECT lpRect);
 BOOL WINAPI HookedScreenToClient(HWND hWnd, LPPOINT lpPoint);
+int WINAPI HookedMapWindowPoints(HWND hWndFrom, HWND hWndTo, LPPOINT lpPoints, UINT cPoints);
+
 LRESULT CALLBACK HookedWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
