@@ -20,6 +20,7 @@ void LoadConfig() {
 
     // General
     g_Config.transmitTheWindow = GetPrivateProfileIntA("General", "TransmitTheWindow", 0, configFile.c_str());
+    g_Config.removeBorders = GetPrivateProfileIntA("General", "RemoveBorders", 0, configFile.c_str());
     g_Config.waitSeconds = GetPrivateProfileIntA("General", "Wait", 0, configFile.c_str());
 
     // Logic Switches

@@ -7,6 +7,7 @@
 struct Config {
     // General
     bool transmitTheWindow;
+    bool removeBorders;
     int waitSeconds;
     bool getDimsThenSet;
     bool dontGetSize;

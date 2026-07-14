@@ -78,6 +78,18 @@ DWORD WINAPI InitializationThread(LPVOID lpParam) {
         }
     }
 
+    // Remove Borders Logic
+    if (g_Config.removeBorders && g_hTargetWindow) {
+        DWORD dwStyle = GetWindowLong(g_hTargetWindow, GWL_STYLE);
+        DWORD dwExStyle = GetWindowLong(g_hTargetWindow, GWL_EXSTYLE);
+
+        dwStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
+        dwExStyle &= ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_WINDOWEDGE);
+
+        SetWindowLong(g_hTargetWindow, GWL_STYLE, dwStyle);
+        SetWindowLong(g_hTargetWindow, GWL_EXSTYLE, dwExStyle);
+    }
+
     // Transmit Logic (Apply initial move with border compensation)
     if (g_Config.transmitTheWindow) {
         UINT uFlags = SWP_NOZORDER | SWP_FRAMECHANGED;

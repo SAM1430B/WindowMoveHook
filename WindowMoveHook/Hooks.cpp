@@ -197,7 +197,46 @@ int WINAPI HookedMapWindowPoints(HWND hWndFrom, HWND hWndTo, LPPOINT lpPoints, U
 
 // Mouse Correction: Window Message Scaling
 LRESULT CALLBACK HookedWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    // Intercept inbound mouse input messages
+    // Safety check in case OriginalWndProc hasn't finalized assignment yet
+    if (!OriginalWndProc) return DefWindowProc(hWnd, uMsg, wParam, lParam);
+
+    if (hWnd == g_hTargetWindow && uMsg == WM_GETMINMAXINFO) {
+        LRESULT res = CallWindowProc(OriginalWndProc, hWnd, uMsg, wParam, lParam);
+
+        MINMAXINFO* mmi = (MINMAXINFO*)lParam;
+        mmi->ptMinTrackSize.x = 1;
+        mmi->ptMinTrackSize.y = 1;
+
+        return res;
+    }
+
+    if (g_Config.removeBorders && hWnd == g_hTargetWindow) {
+
+        if (uMsg == WM_STYLECHANGING) {
+            LPSTYLESTRUCT pStyle = (LPSTYLESTRUCT)lParam;
+            if (wParam == GWL_STYLE) {
+                pStyle->styleNew &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
+            }
+            else if (wParam == GWL_EXSTYLE) {
+                pStyle->styleNew &= ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_WINDOWEDGE);
+            }
+        }
+
+        if (uMsg == WM_ACTIVATE && LOWORD(wParam) != WA_INACTIVE) {
+            DWORD dwStyle = GetWindowLong(hWnd, GWL_STYLE);
+
+            if (dwStyle & WS_CAPTION) {
+                DWORD dwExStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
+
+                SetWindowLong(hWnd, GWL_STYLE, dwStyle & ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU));
+                SetWindowLong(hWnd, GWL_EXSTYLE, dwExStyle & ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_WINDOWEDGE));
+
+                // Force Windows redraw the frame
+                SetWindowPos(hWnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+            }
+        }
+    }
+
     if (g_Config.enableFakeSize && hWnd == g_hTargetWindow) {
 
         if (uMsg == WM_MOUSEMOVE || uMsg == WM_MOUSEHOVER ||
