@@ -3,7 +3,13 @@
 
 void LoadConfig() {
     char iniPath[MAX_PATH];
-    GetModuleFileNameA(NULL, iniPath, MAX_PATH);
+
+    HMODULE hModule = NULL;
+    GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        (LPCSTR)&LoadConfig, &hModule);
+
+    GetModuleFileNameA(hModule, iniPath, MAX_PATH);
+
     std::string rootPath = iniPath;
     size_t lastSlash = rootPath.find_last_of("\\/");
     if (lastSlash != std::string::npos) {
