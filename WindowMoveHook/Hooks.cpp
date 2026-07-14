@@ -118,6 +118,32 @@ BOOL WINAPI HookedAdjustWindowRect(LPRECT lpRect, DWORD dwStyle, BOOL bMenu) {
     return TrueAdjustWindowRect(lpRect, dwStyle, bMenu);
 }
 
+// Helper function to dynamically calculate the effective Fake Size
+void GetEffectiveFakeSize(int realW, int realH, int& outFakeW, int& outFakeH) {
+    if (g_Config.autoUpScale && realW > 0 && realH > 0) {
+        if (g_Config.autoMaintainAspectRatio == 1) {
+			// Maintain Aspect Ratio Mode: Scale up to meet minimums while preserving the original aspect ratio
+            double scaleX = (realW < g_Config.autoUpScaleMinW) ? ((double)g_Config.autoUpScaleMinW / realW) : 1.0;
+            double scaleY = (realH < g_Config.autoUpScaleMinH) ? ((double)g_Config.autoUpScaleMinH / realH) : 1.0;
+
+            double scale = (std::max)(scaleX, scaleY);
+
+            outFakeW = static_cast<int>(std::round(realW * scale));
+            outFakeH = static_cast<int>(std::round(realH * scale));
+        }
+        else {
+			// Independent Scaling Mode: Scale each dimension independently to meet minimums
+            outFakeW = (std::max)(realW, g_Config.autoUpScaleMinW);
+            outFakeH = (std::max)(realH, g_Config.autoUpScaleMinH);
+        }
+    }
+    else {
+        // Fallback to static FakeSize config
+        outFakeW = g_Config.fakeW;
+        outFakeH = g_Config.fakeH;
+    }
+}
+
 // Fake Size Logic
 BOOL WINAPI HookedGetClientRect(HWND hWnd, LPRECT lpRect) {
     void* retAddr = _ReturnAddress();
@@ -126,10 +152,16 @@ BOOL WINAPI HookedGetClientRect(HWND hWnd, LPRECT lpRect) {
     if (result && g_Config.enableFakeSize && hWnd == g_hTargetWindow) {
         // Enforce fake size unless caller is bypassed
         if (!IsCallerBypassed(retAddr)) {
+            int realW = lpRect->right - lpRect->left;
+            int realH = lpRect->bottom - lpRect->top;
+
+            int fakeW, fakeH;
+            GetEffectiveFakeSize(realW, realH, fakeW, fakeH);
+
             lpRect->left = 0;
             lpRect->top = 0;
-            lpRect->right = g_Config.fakeW;
-            lpRect->bottom = g_Config.fakeH;
+            lpRect->right = fakeW;
+            lpRect->bottom = fakeH;
         }
     }
     return result;
@@ -147,8 +179,11 @@ void GetMouseScaleFactors(double& scaleX, double& scaleY) {
         int realH = realClient.bottom - realClient.top;
 
         if (realW > 0 && realH > 0) {
-            scaleX = (double)g_Config.fakeW / realW;
-            scaleY = (double)g_Config.fakeH / realH;
+            int fakeW, fakeH;
+            GetEffectiveFakeSize(realW, realH, fakeW, fakeH);
+
+            scaleX = (double)fakeW / realW;
+            scaleY = (double)fakeH / realH;
             return;
         }
     }
@@ -167,8 +202,8 @@ BOOL WINAPI HookedScreenToClient(HWND hWnd, LPPOINT lpPoint) {
             GetMouseScaleFactors(scaleX, scaleY);
 
             // Scale the physical coordinate UP to the fake coordinate with pixel-perfect rounding
-            lpPoint->x = std::lround(lpPoint->x * scaleX);
-            lpPoint->y = std::lround(lpPoint->y * scaleY);
+            lpPoint->x = static_cast<int>(std::round(lpPoint->x * scaleX));
+            lpPoint->y = static_cast<int>(std::round(lpPoint->y * scaleY));
         }
     }
     return result;
@@ -186,8 +221,8 @@ int WINAPI HookedMapWindowPoints(HWND hWndFrom, HWND hWndTo, LPPOINT lpPoints, U
             GetMouseScaleFactors(scaleX, scaleY);
 
             for (UINT i = 0; i < cPoints; ++i) {
-                lpPoints[i].x = std::lround(lpPoints[i].x * scaleX);
-                lpPoints[i].y = std::lround(lpPoints[i].y * scaleY);
+                lpPoints[i].x = static_cast<int>(std::round(lpPoints[i].x * scaleX));
+                lpPoints[i].y = static_cast<int>(std::round(lpPoints[i].y * scaleY));
             }
         }
     }
@@ -254,12 +289,13 @@ LRESULT CALLBACK HookedWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
             GetMouseScaleFactors(scaleX, scaleY);
 
             // Scale the physical coordinate up to the fake coordinate
-            xPos = static_cast<int>(xPos * scaleX);
-            yPos = static_cast<int>(yPos * scaleY);
+            xPos = static_cast<int>(std::round(xPos * scaleX));
+            yPos = static_cast<int>(std::round(yPos * scaleY));
 
             // Re-pack the modified coordinates safely back into a 32-bit lParam
             lParam = MAKELPARAM(xPos, yPos);
         }
     }
+
     return CallWindowProc(OriginalWndProc, hWnd, uMsg, wParam, lParam);
 }

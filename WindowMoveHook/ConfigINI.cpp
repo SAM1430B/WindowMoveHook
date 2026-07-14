@@ -39,6 +39,12 @@ void LoadConfig() {
     g_Config.fakeW = GetPrivateProfileIntA("FakeSize", "FakeWidth", 1920, configFile.c_str());
     g_Config.fakeH = GetPrivateProfileIntA("FakeSize", "FakeHeight", 1080, configFile.c_str());
 
+    // Auto UpScale
+    g_Config.autoUpScale = GetPrivateProfileIntA("FakeSize", "AutoUpScale", 0, configFile.c_str());
+    g_Config.autoMaintainAspectRatio = GetPrivateProfileIntA("FakeSize", "AutoMaintainAspectRatio", 1, configFile.c_str());
+    g_Config.autoUpScaleMinW = GetPrivateProfileIntA("FakeSize", "AutoUpScaleMinW", 1024, configFile.c_str());
+    g_Config.autoUpScaleMinH = GetPrivateProfileIntA("FakeSize", "AutoUpScaleMinH", 768, configFile.c_str());
+
     int fakeSizeDefault = g_Config.enableFakeSize ? 1 : 0;
 
     // FindWindow

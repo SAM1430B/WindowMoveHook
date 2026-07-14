@@ -22,6 +22,12 @@ struct Config {
     bool enableFakeSize;
     int fakeW, fakeH;
 
+    // Auto Up-Scale Logic
+    bool autoUpScale;
+    int autoMaintainAspectRatio;
+    int autoUpScaleMinW;
+    int autoUpScaleMinH;
+
     // FindWindow
     char reqWindowName[256];
     char reqClassName[256];
